@@ -467,21 +467,31 @@ export const useAppStore = create<AppState>()(
         const { profile, skillLevels, equipment, block, sessions, prs } = data
         if (!profile) return
         const state = get()
+
+        // Merge sessions: cloud sessions (by ID) take priority,
+        // but keep local planned sessions that were never synced
+        const cloudIds = new Set(sessions.map(s => s.id))
+        const localOnly = state.sessions.filter(s => !cloudIds.has(s.id))
+        const mergedSessions = [...sessions, ...localOnly]
+
+        // Merge PRs by ID
+        const cloudPrIds = new Set(prs.map(p => p.id))
+        const localOnlyPrs = state.personalRecords.filter(p => !cloudPrIds.has(p.id))
+        const mergedPrs = [...prs, ...localOnlyPrs]
+
         set({
           userProfile: profile,
-          // Only overwrite skillLevels / equipment if cloud has data, else keep local
           skillLevels: skillLevels.length > 0 ? skillLevels : state.skillLevels,
           equipmentProfiles: equipment.length > 0 ? equipment : state.equipmentProfiles,
           activeEquipmentProfileId: equipment.find(e => e.is_default)?.id
             ?? equipment[0]?.id
             ?? state.activeEquipmentProfileId,
-          // Keep local block if Supabase has none yet (e.g. migration just ran)
           currentBlock: block ?? state.currentBlock,
-          // Merge sessions: prefer cloud records but keep local ones not on cloud
-          sessions: sessions.length > 0 ? sessions : state.sessions,
-          personalRecords: prs.length > 0 ? prs : state.personalRecords,
+          sessions: mergedSessions,
+          personalRecords: mergedPrs,
         })
-        // If there's still no block after merge, create one now
+
+        // If there's still no block, create one now
         if (!block && !state.currentBlock) {
           get().createFirstBlock()
         }

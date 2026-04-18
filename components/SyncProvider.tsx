@@ -1,12 +1,11 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/lib/store/app-store'
 import { createClient } from '@/lib/supabase/client'
 import { loadUserData, syncProfile, syncSkillLevels, syncEquipmentProfiles, syncBlock, syncSession, syncPR } from '@/lib/supabase/sync'
 
 export function SyncProvider() {
-  const store             = useAppStore()
   const userProfile       = useAppStore(s => s.userProfile)
   const skillLevels       = useAppStore(s => s.skillLevels)
   const sessions          = useAppStore(s => s.sessions)
@@ -14,58 +13,66 @@ export function SyncProvider() {
   const equipmentProfiles = useAppStore(s => s.equipmentProfiles)
   const personalRecords   = useAppStore(s => s.personalRecords)
   const restoreFromCloud  = useAppStore(s => s.restoreFromCloud)
-  const loaded            = useRef(false)
-  const syncTimer         = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const authUserId        = useRef<string | null>(null)
 
-  // ── On mount: try to load from Supabase ──────────────────────────────
+  // Use state (not ref) so the sync effect re-runs once auth resolves
+  const [authUserId, setAuthUserId] = useState<string | null>(null)
+  const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // ── Load from Supabase ────────────────────────────────────────────────
+  async function loadFromCloud() {
+    try {
+      const sb = createClient()
+      const { data: { user } } = await sb.auth.getUser()
+      if (!user) return
+      if (!authUserId) setAuthUserId(user.id)
+
+      const data = await loadUserData(user.id)
+      if (data.profile) restoreFromCloud(data)
+    } catch {
+      // Supabase not configured — use localStorage
+    }
+  }
+
+  // On mount: load once
   useEffect(() => {
-    if (loaded.current) return
-    loaded.current = true
+    loadFromCloud()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-    ;(async () => {
-      try {
-        const sb = createClient()
-        const { data: { user } } = await sb.auth.getUser()
-        if (!user) return
-        authUserId.current = user.id
-
-        const data = await loadUserData(user.id)
-        if (data.profile) {
-          restoreFromCloud(data)
-        }
-      } catch {
-        // Supabase not configured or tables missing — use localStorage
-      }
-    })()
-  }, [restoreFromCloud])
-
-  // ── Debounced sync back to Supabase whenever key state changes ────────
+  // Re-load whenever the app becomes visible again (switching devices / tabs)
   useEffect(() => {
-    if (!authUserId.current) return
+    function onVisible() {
+      if (document.visibilityState === 'visible') loadFromCloud()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUserId])
+
+  // ── Debounced write back to Supabase on state changes ────────────────
+  // authUserId is now in deps — so the effect re-runs once auth resolves,
+  // ensuring the initial sync actually fires.
+  useEffect(() => {
+    if (!authUserId) return
     if (syncTimer.current) clearTimeout(syncTimer.current)
 
     syncTimer.current = setTimeout(async () => {
-      const uid = authUserId.current
-      if (!uid) return
       try {
-        if (userProfile)              await syncProfile(userProfile, uid)
-        if (skillLevels.length)       await syncSkillLevels(skillLevels, uid)
-        if (equipmentProfiles.length) await syncEquipmentProfiles(equipmentProfiles, uid)
-        if (currentBlock)             await syncBlock(currentBlock, uid)
-        for (const s of sessions.filter(s => s.status === 'completed' || s.status === 'in_progress')) {
-          await syncSession(s, uid)
+        if (userProfile)              await syncProfile(userProfile, authUserId)
+        if (skillLevels.length)       await syncSkillLevels(skillLevels, authUserId)
+        if (equipmentProfiles.length) await syncEquipmentProfiles(equipmentProfiles, authUserId)
+        if (currentBlock)             await syncBlock(currentBlock, authUserId)
+        for (const s of sessions.filter(s => s.status !== 'planned')) {
+          await syncSession(s, authUserId)
         }
         for (const pr of personalRecords) {
-          await syncPR(pr, uid)
+          await syncPR(pr, authUserId)
         }
       } catch {
         // silent
       }
-    }, 3000)
-  }, [userProfile, skillLevels, sessions, currentBlock, equipmentProfiles, personalRecords])
-
-  void store
+    }, 2000)
+  }, [authUserId, userProfile, skillLevels, sessions, currentBlock, equipmentProfiles, personalRecords])
 
   return null
 }
