@@ -31,54 +31,54 @@ export function SplashScreen() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.55, ease: 'easeInOut' }}
           className="fixed inset-0 z-[9999] flex flex-col items-center justify-center"
-          style={{ background: '#f8f9fa' }}
+          style={{ background: '#3a3a3a' }}
         >
-          {/* Gorilla logo */}
+          {/* Gorilla face */}
           <motion.div
             initial={{ opacity: 0, scale: 0.82 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           >
             <Image
-              src="/brand/icon.png"
+              src="/brand/gorilla-face.png"
               alt="Troop"
-              width={96}
-              height={96}
+              width={140}
+              height={140}
               priority
-              style={{ display: 'block' }}
+              style={{ display: 'block', borderRadius: '24px' }}
             />
           </motion.div>
 
           {/* Wordmark */}
           <motion.div
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, ease: 'easeOut', delay: 0.28 }}
+            transition={{ duration: 0.45, ease: 'easeOut', delay: 0.3 }}
             style={{
               fontFamily: 'system-ui, -apple-system, sans-serif',
               fontWeight: 700,
-              fontSize: '1.75rem',
+              fontSize: '2rem',
               letterSpacing: '-0.04em',
-              color: '#111827',
-              marginTop: '12px',
+              color: '#ffffff',
+              marginTop: '18px',
               lineHeight: 1,
             }}
           >
             troop
           </motion.div>
 
-          {/* Subtle tagline */}
+          {/* Tagline */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4, delay: 0.55 }}
             style={{
               fontFamily: 'system-ui, -apple-system, sans-serif',
-              fontSize: '0.75rem',
-              letterSpacing: '0.12em',
+              fontSize: '0.7rem',
+              letterSpacing: '0.16em',
               textTransform: 'uppercase',
-              color: '#9ca3af',
-              marginTop: '6px',
+              color: 'rgba(255,255,255,0.45)',
+              marginTop: '7px',
             }}
           >
             train with the troop
