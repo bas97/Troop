@@ -9,6 +9,122 @@ import { Card } from '@/components/ui/card'
 import { ProgressBar } from '@/components/ui/progress-bar'
 import { BackButton } from '@/components/ui/back-button'
 import { format, parseISO, subDays } from 'date-fns'
+import type { UserSkillStatus } from '@/types'
+
+// ─── Edit Focus Skills modal ──────────────────────────────────────────────────
+
+function EditFocusModal({ onClose }: { onClose: () => void }) {
+  const skillLevels = useAppStore(s => s.skillLevels)
+  const setSkillStatus = useAppStore(s => s.setSkillStatus)
+
+  const families = ['pushing', 'pulling', 'balance', 'legs'] as const
+
+  function toggle(skillId: string, current: UserSkillStatus) {
+    if (current === 'focus') {
+      setSkillStatus(skillId, 'maintenance')
+    } else if (current === 'maintenance' || current === 'paused') {
+      setSkillStatus(skillId, 'focus')
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex flex-col"
+      style={{ background: 'var(--bg-base)' }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 pt-12 pb-4 border-b border-[var(--border)]">
+        <div>
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Edit Focus Skills</h2>
+          <p className="text-sm text-[var(--text-secondary)] mt-0.5">Tap a skill to toggle focus on/off</p>
+        </div>
+        <button
+          onClick={onClose}
+          className="w-8 h-8 rounded-full flex items-center justify-center"
+          style={{ background: 'var(--bg-elevated)' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M1 1L13 13M13 1L1 13" stroke="var(--text-secondary)" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 py-4">
+        {families.map(family => {
+          const familySkills = SKILLS.filter(s => s.family === family)
+          const tracked = familySkills.filter(s => skillLevels.some(sl => sl.skill_id === s.id && sl.status !== 'locked'))
+          if (tracked.length === 0) return null
+
+          return (
+            <div key={family} className="mb-6">
+              <div className="text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-3 capitalize">{family}</div>
+              <div className="flex flex-col gap-2">
+                {tracked.map(skill => {
+                  const sl = skillLevels.find(s => s.skill_id === skill.id)!
+                  const isFocus = sl.status === 'focus'
+                  const progression = getProgressionById(sl.current_progression_id)
+
+                  return (
+                    <button
+                      key={skill.id}
+                      onClick={() => toggle(skill.id, sl.status)}
+                      className="flex items-center gap-3 p-3 rounded-xl border transition-all text-left"
+                      style={{
+                        background: isFocus ? 'var(--accent-muted)' : 'var(--bg-surface)',
+                        borderColor: isFocus ? 'var(--accent)' : 'var(--border)',
+                      }}
+                    >
+                      {/* Focus indicator */}
+                      <div
+                        className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
+                        style={{
+                          borderColor: isFocus ? 'var(--accent)' : 'var(--border)',
+                          background: isFocus ? 'var(--accent)' : 'transparent',
+                        }}
+                      >
+                        {isFocus && (
+                          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                            <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm text-[var(--text-primary)]">{skill.name}</div>
+                        <div className="text-xs text-[var(--text-secondary)] truncate">{progression?.name ?? 'Level 1'}</div>
+                      </div>
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
+                        style={{
+                          background: isFocus ? 'var(--accent)' : 'var(--bg-elevated)',
+                          color: isFocus ? 'white' : 'var(--text-secondary)',
+                        }}
+                      >
+                        {isFocus ? 'Focus' : 'Maintenance'}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="px-5 pb-8 pt-4 border-t border-[var(--border)]">
+        <button
+          onClick={onClose}
+          className="w-full py-3 rounded-xl font-medium text-white"
+          style={{ background: 'var(--accent)' }}
+        >
+          Done
+        </button>
+      </div>
+    </motion.div>
+  )
+}
 
 // ─── Skill card ───────────────────────────────────────────────────────────────
 
@@ -237,12 +353,13 @@ function RecentPRs() {
 export default function ProgressPage() {
   const skillLevels = useAppStore(s => s.skillLevels)
   const [expandedSkill, setExpandedSkill] = useState<string | null>(null)
+  const [editingFocus, setEditingFocus] = useState(false)
 
   const focusSkills = skillLevels.filter(sl => sl.status === 'focus')
   const maintenanceSkills = skillLevels.filter(sl => sl.status === 'maintenance')
 
   return (
-    <div className="px-5 pt-12 page-enter">
+    <div className="px-5 pt-12 pb-24 page-enter">
       <BackButton className="mb-2" />
       <div className="mb-6">
         <div className="text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-1">Your journey</div>
@@ -252,23 +369,39 @@ export default function ProgressPage() {
       <ActivityHeatmap />
       <RecentPRs />
 
-      {focusSkills.length > 0 && (
-        <div className="mb-6">
-          <div className="text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-3">Focus skills</div>
-          {focusSkills.map(sl => (
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-xs uppercase tracking-widest text-[var(--text-tertiary)]">Focus skills</div>
+          <button
+            onClick={() => setEditingFocus(true)}
+            className="text-xs font-medium px-3 py-1 rounded-full border transition-colors"
+            style={{ borderColor: 'var(--accent)', color: 'var(--accent)' }}
+          >
+            Edit
+          </button>
+        </div>
+        {focusSkills.length > 0 ? (
+          focusSkills.map(sl => (
             <SkillCard
               key={sl.skill_id}
               skillId={sl.skill_id}
               expanded={expandedSkill === sl.skill_id}
               onToggle={() => setExpandedSkill(expandedSkill === sl.skill_id ? null : sl.skill_id)}
             />
-          ))}
-        </div>
-      )}
+          ))
+        ) : (
+          <div
+            className="rounded-xl border p-4 text-sm text-center"
+            style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'var(--bg-surface)' }}
+          >
+            No focus skills set. Tap Edit to choose which skills to prioritise.
+          </div>
+        )}
+      </div>
 
       {maintenanceSkills.length > 0 && (
         <div className="mb-6">
-          <div className="text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-3">All skills</div>
+          <div className="text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-3">Maintenance</div>
           {maintenanceSkills.map(sl => (
             <SkillCard
               key={sl.skill_id}
@@ -279,6 +412,10 @@ export default function ProgressPage() {
           ))}
         </div>
       )}
+
+      <AnimatePresence>
+        {editingFocus && <EditFocusModal onClose={() => setEditingFocus(false)} />}
+      </AnimatePresence>
     </div>
   )
 }

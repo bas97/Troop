@@ -72,6 +72,7 @@ interface AppState {
   setActiveEquipmentProfile: (id: string) => void
   advanceProgression: (skillId: string) => void
   regressProgression: (skillId: string) => void
+  setSkillStatus: (skillId: string, status: import('@/types').UserSkillStatus) => void
   restoreFromCloud: (data: import('@/lib/supabase/sync').SupabaseUserData) => void
   addPark: (park: UserPark) => void
   removePark: (placeId: string) => void
@@ -396,6 +397,23 @@ export const useAppStore = create<AppState>()(
             return { ...sl, current_progression_id: prev.id, current_progression_level: prev.level }
           }),
         }))
+      },
+
+      setSkillStatus: (skillId, status) => {
+        set(state => {
+          const newSkillLevels = state.skillLevels.map(sl =>
+            sl.skill_id === skillId ? { ...sl, status } : sl
+          )
+          // Keep the training block's focus/maintenance lists in sync
+          const newFocusIds = newSkillLevels.filter(sl => sl.status === 'focus').map(sl => sl.skill_id)
+          const newMaintenanceIds = newSkillLevels.filter(sl => sl.status === 'maintenance').map(sl => sl.skill_id)
+          return {
+            skillLevels: newSkillLevels,
+            currentBlock: state.currentBlock
+              ? { ...state.currentBlock, focus_skill_ids: newFocusIds, maintenance_skill_ids: newMaintenanceIds }
+              : state.currentBlock,
+          }
+        })
       },
 
       restoreFromCloud: (data) => {
