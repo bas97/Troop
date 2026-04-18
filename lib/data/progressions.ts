@@ -678,6 +678,307 @@ export function getProgressionsForSkill(skillId: string): Progression[] {
   return PROGRESSIONS.filter(p => p.skill_id === skillId).sort((a, b) => a.level - b.level)
 }
 
+// ─── WARMUP entries (skill_id: 'warmup') ─────────────────────────────────────
+const WARMUP_PROGRESSIONS: Progression[] = [
+  {
+    id: 'warmup_wrist', skill_id: 'warmup', level: 1, name: 'Wrist Warm-up',
+    unlock_criteria: { type: 'hold_time', target_value: 120, target_sets: 1, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Joint circles in both directions', 'Wrist flexion/extension stretches', 'Finger pulses — open and close'],
+    common_mistakes: ['Skipping this — wrist injuries from cold loading'],
+  },
+  {
+    id: 'warmup_shoulder', skill_id: 'warmup', level: 2, name: 'Shoulder Activation',
+    unlock_criteria: { type: 'reps', target_value: 15, target_sets: 1, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Band pull-aparts or doorframe stretches', 'Scapular push-ups (protract / retract)', 'Arm circles both directions'],
+    common_mistakes: ['Going straight into heavy sets'],
+  },
+  {
+    id: 'warmup_hips', skill_id: 'warmup', level: 3, name: 'Hip & Ankle Warm-up',
+    unlock_criteria: { type: 'reps', target_value: 10, target_sets: 1, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Hip circles each direction', 'Ankle rotations each foot', 'Leg swings front/back and lateral'],
+    common_mistakes: ['Rushing through — take 60-90s here'],
+  },
+]
+
+// ─── MOBILITY entries (skill_id: 'mobility') ─────────────────────────────────
+const MOBILITY_PROGRESSIONS: Progression[] = [
+  {
+    id: 'mob_cooldown', skill_id: 'mobility', level: 1, name: 'Cool-down Stretch',
+    unlock_criteria: { type: 'hold_time', target_value: 300, target_sets: 1, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Stretch every muscle group trained today', 'Hold each stretch 30-60 seconds', 'Breathe deeply into tight areas'],
+    common_mistakes: ['Skipping the cool-down — recovery suffers'],
+  },
+]
+
+// ─── STRENGTH / ACCESSORY entries (skill_id: 'strength') ─────────────────────
+const STRENGTH_PROGRESSIONS: Progression[] = [
+  // ── Planche support ─────────────────────────────────────────────────────────
+  {
+    id: 'str_pseudo_pp', skill_id: 'strength', level: 1, name: 'Pseudo Planche Push-up',
+    unlock_criteria: { type: 'reps', target_value: 8, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: ['parallettes'],
+    difficulty_modifiers: { parallettes: 0.85 },
+    form_cues: ['Hands beside hips', 'Lean shoulders over hands', 'Protract scapulae throughout'],
+    common_mistakes: ['Hands too far forward', 'Not leaning far enough'],
+  },
+  {
+    id: 'str_planche_lean', skill_id: 'strength', level: 2, name: 'Weighted Planche Lean',
+    unlock_criteria: { type: 'hold_time', target_value: 20, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: ['parallettes'],
+    difficulty_modifiers: {},
+    form_cues: ['Max forward lean with arms locked', 'Shoulders depressed', 'Add weight vest / band resistance'],
+    common_mistakes: ['Bending arms to cheat the lean'],
+  },
+  {
+    id: 'str_scapular_push', skill_id: 'strength', level: 3, name: 'Scapular Push-up',
+    unlock_criteria: { type: 'reps', target_value: 10, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Arms stay straight', 'Only move: protract and retract scapulae', 'Full range — sink then push floor away'],
+    common_mistakes: ['Bending elbows', 'Minimal range of motion'],
+  },
+  // ── HSPU support ────────────────────────────────────────────────────────────
+  {
+    id: 'str_pike_pushup', skill_id: 'strength', level: 4, name: 'Pike Push-up',
+    unlock_criteria: { type: 'reps', target_value: 10, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Hips high in inverted V', 'Lower head between hands', 'Full ROM — nose to floor'],
+    common_mistakes: ['Flared elbows', 'Partial range of motion'],
+  },
+  {
+    id: 'str_dips', skill_id: 'strength', level: 5, name: 'Dips',
+    unlock_criteria: { type: 'reps', target_value: 10, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: ['parallel_bars'],
+    difficulty_modifiers: {},
+    form_cues: ['Lock out fully at top', 'Lean slightly forward for chest', 'Full depth — shoulders below elbows'],
+    common_mistakes: ['Partial range', 'Flared elbows'],
+  },
+  // ── Front Lever support ─────────────────────────────────────────────────────
+  {
+    id: 'str_fl_rows', skill_id: 'strength', level: 6, name: 'Front Lever Rows',
+    unlock_criteria: { type: 'reps', target_value: 8, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: ['pullup_bar'],
+    difficulty_modifiers: {},
+    form_cues: ['Start in tuck FL', 'Row elbows past body', 'Control the descent'],
+    common_mistakes: ['Hips dropping', 'Using momentum'],
+  },
+  {
+    id: 'str_weighted_pullup', skill_id: 'strength', level: 7, name: 'Weighted Pull-up',
+    unlock_criteria: { type: 'reps', target_value: 5, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: ['pullup_bar'],
+    difficulty_modifiers: {},
+    form_cues: ['Full dead hang at bottom', 'Pull chin over bar', 'Controlled 2-3s descent'],
+    common_mistakes: ['Kipping', 'Partial range of motion'],
+  },
+  // ── Back Lever support ──────────────────────────────────────────────────────
+  {
+    id: 'str_skin_cat', skill_id: 'strength', level: 8, name: 'Skin the Cat',
+    unlock_criteria: { type: 'reps', target_value: 5, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: ['pullup_bar'],
+    difficulty_modifiers: {},
+    form_cues: ['Controlled rotation through German hang', 'Return through same path', 'Straight arms throughout'],
+    common_mistakes: ['Forcing shoulder range before ready', 'Bending arms'],
+  },
+  {
+    id: 'str_ring_support', skill_id: 'strength', level: 9, name: 'Ring Support Hold',
+    unlock_criteria: { type: 'hold_time', target_value: 30, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: ['rings'],
+    difficulty_modifiers: {},
+    form_cues: ['Rings turned out at top', 'Arms fully locked', 'Depress and retract scapulae'],
+    common_mistakes: ['Rings not turned out', 'Passive hang — no active tension'],
+  },
+  // ── Muscle-Up support ───────────────────────────────────────────────────────
+  {
+    id: 'str_high_pullup', skill_id: 'strength', level: 10, name: 'Chest-to-Bar Pull-up',
+    unlock_criteria: { type: 'reps', target_value: 5, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: ['pullup_bar'],
+    difficulty_modifiers: {},
+    form_cues: ['Pull sternum to bar', 'Elbows drive back', 'Full dead hang between reps'],
+    common_mistakes: ['Stopping at chin', 'Excessive kip'],
+  },
+  {
+    id: 'str_bar_dip', skill_id: 'strength', level: 11, name: 'Bar Dip',
+    unlock_criteria: { type: 'reps', target_value: 10, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: ['parallel_bars'],
+    difficulty_modifiers: {},
+    form_cues: ['Full lockout at top', 'Controlled descent', 'Upright torso for tricep focus'],
+    common_mistakes: ['Partial range', 'Leaning too far forward'],
+  },
+  // ── One-Arm Pull-Up support ─────────────────────────────────────────────────
+  {
+    id: 'str_archer_row', skill_id: 'strength', level: 12, name: 'Archer Row',
+    unlock_criteria: { type: 'reps', target_value: 5, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: ['pullup_bar'],
+    difficulty_modifiers: {},
+    form_cues: ['Wide grip, pull to one side', 'Assisting arm stays straight', 'Shift more weight to working arm over time'],
+    common_mistakes: ['Assisting arm bending', 'Not pulling far enough to working side'],
+  },
+  // ── Handstand support ───────────────────────────────────────────────────────
+  {
+    id: 'str_wall_hs_hold', skill_id: 'strength', level: 13, name: 'Wall Handstand Hold',
+    unlock_criteria: { type: 'hold_time', target_value: 60, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Stack wrists-shoulders-hips', 'Press through shoulder blades', 'Hollow body — ribs down, glutes squeezed'],
+    common_mistakes: ['Banana back', 'Heels away from wall'],
+  },
+  {
+    id: 'str_shoulder_tap', skill_id: 'strength', level: 14, name: 'Handstand Shoulder Taps',
+    unlock_criteria: { type: 'reps', target_value: 10, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Chest to wall handstand', 'Slowly shift weight to one arm', 'Tap shoulder lightly, return'],
+    common_mistakes: ['Rushing — losing balance', 'Not shifting hips enough'],
+  },
+  // ── L-Sit support ───────────────────────────────────────────────────────────
+  {
+    id: 'str_pike_compression', skill_id: 'strength', level: 15, name: 'Pike Compression',
+    unlock_criteria: { type: 'reps', target_value: 10, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Seated with legs straight', 'Pull chest toward legs using hip flexors', 'Hold each rep 2s at bottom'],
+    common_mistakes: ['Rounding back to cheat range', 'Using hands to pull down'],
+  },
+  {
+    id: 'str_hip_flexor_raise', skill_id: 'strength', level: 16, name: 'Hanging Knee / Leg Raise',
+    unlock_criteria: { type: 'reps', target_value: 10, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: ['pullup_bar'],
+    difficulty_modifiers: {},
+    form_cues: ['Hang from bar', 'Raise knees (or straight legs) to parallel', 'Control the descent'],
+    common_mistakes: ['Swinging', 'Partial range'],
+  },
+  // ── Human Flag support ──────────────────────────────────────────────────────
+  {
+    id: 'str_side_plank', skill_id: 'strength', level: 17, name: 'Side Plank',
+    unlock_criteria: { type: 'hold_time', target_value: 30, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Stack feet or stagger for stability', 'Hip off the floor', 'Straight line from head to feet'],
+    common_mistakes: ['Hips sagging', 'Rotation forward'],
+  },
+  {
+    id: 'str_oblique_crunch', skill_id: 'strength', level: 18, name: 'Oblique Crunch',
+    unlock_criteria: { type: 'reps', target_value: 15, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Rotate torso each rep', 'Slow and controlled', 'Full range — shoulder toward opposite knee'],
+    common_mistakes: ['Pulling on neck', 'Too fast — momentum not muscle'],
+  },
+  // ── Pistol Squat support ────────────────────────────────────────────────────
+  {
+    id: 'str_bulgarian_ss', skill_id: 'strength', level: 19, name: 'Bulgarian Split Squat',
+    unlock_criteria: { type: 'reps', target_value: 10, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Rear foot elevated', 'Vertical shin on front leg', 'Drive through front heel'],
+    common_mistakes: ['Front knee caving', 'Excessive torso lean'],
+  },
+  {
+    id: 'str_calf_raise', skill_id: 'strength', level: 20, name: 'Single-Leg Calf Raise',
+    unlock_criteria: { type: 'reps', target_value: 15, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Full range — heel below neutral', 'Pause at top', 'Slow 2s descent'],
+    common_mistakes: ['Partial range', 'Bouncing at bottom'],
+  },
+  // ── Shrimp Squat support ────────────────────────────────────────────────────
+  {
+    id: 'str_step_up', skill_id: 'strength', level: 21, name: 'Step-Up',
+    unlock_criteria: { type: 'reps', target_value: 10, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Drive through the heel', 'Step fully onto surface', 'Control the descent'],
+    common_mistakes: ['Pushing off back foot', 'Collapsing knee'],
+  },
+  {
+    id: 'str_quad_stretch', skill_id: 'strength', level: 22, name: 'Couch Stretch',
+    unlock_criteria: { type: 'hold_time', target_value: 30, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Rear knee on floor, shin vertical against wall', 'Drive hip forward', 'Upright torso'],
+    common_mistakes: ['Anterior pelvic tilt', 'Not getting full hip extension'],
+  },
+  // ── Nordic support ──────────────────────────────────────────────────────────
+  {
+    id: 'str_hamstring_bridge', skill_id: 'strength', level: 23, name: 'Single-Leg Glute Bridge',
+    unlock_criteria: { type: 'reps', target_value: 15, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Foot flat, knee bent', 'Drive hips high', 'Squeeze glute hard at top — pause 1s'],
+    common_mistakes: ['Hips not fully extending', 'Working leg foot slipping'],
+  },
+  {
+    id: 'str_rdl', skill_id: 'strength', level: 24, name: 'Single-Leg Romanian Deadlift',
+    unlock_criteria: { type: 'reps', target_value: 10, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Hip hinge — push hips back', 'Flat back throughout', 'Feel hamstring lengthening'],
+    common_mistakes: ['Rounding back', 'Knee of standing leg locked out'],
+  },
+  // ── Core ────────────────────────────────────────────────────────────────────
+  {
+    id: 'str_hollow_body', skill_id: 'strength', level: 25, name: 'Hollow Body Hold',
+    unlock_criteria: { type: 'hold_time', target_value: 30, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Lower back pressed flat to floor', 'Arms overhead, legs straight and low', 'Hold without breathing too shallow'],
+    common_mistakes: ['Lower back arching off floor', 'Arms separated from ears'],
+  },
+  {
+    id: 'str_dead_bug', skill_id: 'strength', level: 26, name: 'Dead Bug',
+    unlock_criteria: { type: 'reps', target_value: 10, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Lower back flat throughout', 'Extend opposite arm and leg simultaneously', 'Exhale as you extend'],
+    common_mistakes: ['Lower back lifting', 'Moving too fast'],
+  },
+  // ── Leg day fillers ─────────────────────────────────────────────────────────
+  {
+    id: 'str_squat', skill_id: 'strength', level: 27, name: 'Bodyweight Squat',
+    unlock_criteria: { type: 'reps', target_value: 20, target_sets: 4, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Heels flat', 'Knees track over toes', 'Full depth — hips below parallel'],
+    common_mistakes: ['Heels rising', 'Knees caving inward'],
+  },
+  {
+    id: 'str_lunge', skill_id: 'strength', level: 28, name: 'Reverse Lunge',
+    unlock_criteria: { type: 'reps', target_value: 10, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Long stride back', 'Rear knee near floor', 'Drive through front heel to return'],
+    common_mistakes: ['Short stride', 'Knee caving on return'],
+  },
+  {
+    id: 'str_hip_bridge', skill_id: 'strength', level: 29, name: 'Glute Bridge',
+    unlock_criteria: { type: 'reps', target_value: 20, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Feet flat, knees bent', 'Drive hips up until body is a straight line', 'Squeeze glutes at top — pause 1s'],
+    common_mistakes: ['Hips not fully extending', 'Hyperextending lower back'],
+  },
+  {
+    id: 'str_jump_squat', skill_id: 'strength', level: 30, name: 'Jump Squat',
+    unlock_criteria: { type: 'reps', target_value: 10, target_sets: 3, consecutive_sessions: 1 },
+    equipment_required: ['floor'], equipment_preferred: [],
+    difficulty_modifiers: {},
+    form_cues: ['Squat to parallel, explode upward', 'Soft landing — absorb through knees and hips', 'Reset before next rep'],
+    common_mistakes: ['Landing stiff-legged', 'Shallow squat depth'],
+  },
+]
+
+// Merge all auxiliary progressions into the main array at export time
+PROGRESSIONS.push(...WARMUP_PROGRESSIONS, ...MOBILITY_PROGRESSIONS, ...STRENGTH_PROGRESSIONS)
+
 export function getProgressionById(id: string): Progression | undefined {
   return PROGRESSIONS.find(p => p.id === id)
 }

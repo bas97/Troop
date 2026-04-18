@@ -386,49 +386,88 @@ export function generateWorkout(input: GeneratorInput): GeneratorOutput {
   }
 
   // ── 4. Maintenance sets for non-focus skills ───────────────────────────────
-  if (sessionType !== 'legs') {
-    const nonFocusSkillLevels = skillLevels.filter(sl => {
-      if (focusSkillIds.includes(sl.skill_id)) return false
-      if (sl.status === 'locked' || sl.status === 'paused') return false
-      const skill = SKILLS.find(s => s.id === sl.skill_id)
-      if (!skill) return false
-      // Filter by session type
-      if (sessionType === 'push' && !['pushing','balance'].includes(skill.family)) return false
-      if (sessionType === 'pull' && skill.family !== 'pulling') return false
-      return true
-    })
+  const nonFocusSkillLevels = skillLevels.filter(sl => {
+    if (focusSkillIds.includes(sl.skill_id)) return false
+    if (sl.status === 'locked' || sl.status === 'paused') return false
+    const skill = SKILLS.find(s => s.id === sl.skill_id)
+    if (!skill) return false
+    // Filter by session type — leg days get leg maintenance, upper days get upper maintenance
+    if (sessionType === 'push' && !['pushing', 'balance'].includes(skill.family)) return false
+    if (sessionType === 'pull' && skill.family !== 'pulling') return false
+    if (sessionType === 'legs' && skill.family !== 'legs') return false
+    return true
+  })
 
-    for (const sl of nonFocusSkillLevels.slice(0, 2)) {
-      const progressionId = bestAvailableProgressionId(sl.skill_id, sl.current_progression_level, activeEquipment)
-      if (!progressionId) continue
+  for (const sl of nonFocusSkillLevels.slice(0, 2)) {
+    const progressionId = bestAvailableProgressionId(sl.skill_id, sl.current_progression_level, activeEquipment)
+    if (!progressionId) continue
 
-      const progression = getProgressionById(progressionId)
-      if (!progression) continue
+    const progression = getProgressionById(progressionId)
+    if (!progression) continue
 
-      const usedEquipment = selectBestEquipment(progressionId, activeEquipment)
-      // Maintenance: 70-80% of best
-      const maintenanceTarget = Math.max(1, Math.round(progression.unlock_criteria.target_value * 0.75))
+    const usedEquipment = selectBestEquipment(progressionId, activeEquipment)
+    const maintenanceTarget = Math.max(1, Math.round(progression.unlock_criteria.target_value * 0.75))
 
-      exercises.push(buildExercise({
-        progressionId,
-        sets: MAINTENANCE_SETS,
-        targetType: progression.unlock_criteria.type,
-        targetValue: maintenanceTarget,
-        restSeconds: REST.skill_static,
-        category: 'skill',
-        usedEquipment,
-        order: order++,
-        notes: 'Maintenance — 70-80% effort',
-      }))
-    }
+    exercises.push(buildExercise({
+      progressionId,
+      sets: MAINTENANCE_SETS,
+      targetType: progression.unlock_criteria.type,
+      targetValue: maintenanceTarget,
+      restSeconds: REST.skill_static,
+      category: 'skill',
+      usedEquipment,
+      order: order++,
+      notes: 'Maintenance — 70-80% effort',
+    }))
   }
 
-  // ── 5. General strength / accessory ────────────────────────────────────────
+  // ── 5. Leg day: strength fillers + core circuit ─────────────────────────────
   if (sessionType === 'legs') {
-    // Add core work on leg days
+    const skillStrengthCount = exercises.filter(e => ['skill', 'strength'].includes(e.category)).length
+
+    // Fill the session with standard leg work when there aren't enough skill exercises
+    const LEG_FILLERS: Array<{ id: string; type: ExerciseTargetType; target: number; sets: number }> = [
+      { id: 'str_squat',        type: 'reps', target: 20, sets: 4 },
+      { id: 'str_bulgarian_ss', type: 'reps', target: 10, sets: 3 },
+      { id: 'str_lunge',        type: 'reps', target: 10, sets: 3 },
+      { id: 'str_hip_bridge',   type: 'reps', target: 20, sets: 3 },
+      { id: 'str_calf_raise',   type: 'reps', target: 15, sets: 3 },
+      { id: 'str_rdl',          type: 'reps', target: 10, sets: 3 },
+      { id: 'str_jump_squat',   type: 'reps', target: 10, sets: 3 },
+    ]
+
+    let fillersAdded = 0
+    for (const filler of LEG_FILLERS) {
+      if (skillStrengthCount + fillersAdded >= 5) break
+      exercises.push(buildExercise({
+        progressionId: filler.id,
+        sets: Math.max(2, Math.round(filler.sets * volumeMod)),
+        targetType: filler.type,
+        targetValue: filler.target,
+        restSeconds: REST.strength,
+        category: 'strength',
+        usedEquipment: 'floor',
+        order: order++,
+      }))
+      fillersAdded++
+    }
+
+    // Core circuit — always present on leg days
     exercises.push(buildExercise({
       progressionId: 'str_hollow_body',
-      sets: 3, targetType: 'hold_time', targetValue: 30,
+      sets: Math.max(2, Math.round(3 * volumeMod)), targetType: 'hold_time', targetValue: 30,
+      restSeconds: REST.accessory, category: 'accessory',
+      usedEquipment: 'floor', order: order++,
+    }))
+    exercises.push(buildExercise({
+      progressionId: 'str_dead_bug',
+      sets: Math.max(2, Math.round(3 * volumeMod)), targetType: 'reps', targetValue: 10,
+      restSeconds: REST.accessory, category: 'accessory',
+      usedEquipment: 'floor', order: order++,
+    }))
+    exercises.push(buildExercise({
+      progressionId: 'str_side_plank',
+      sets: Math.max(2, Math.round(2 * volumeMod)), targetType: 'hold_time', targetValue: 30,
       restSeconds: REST.accessory, category: 'accessory',
       usedEquipment: 'floor', order: order++,
     }))
