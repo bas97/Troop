@@ -12,6 +12,8 @@ import type {
   LoggedExercise,
   LoggedSet,
   PersonalRecord,
+  Friend,
+  UserChallenge,
 } from '@/types'
 import { PROGRESSIONS } from '@/lib/data/progressions'
 import { generateWorkout, getBlockPhase, getSessionTypeForDay } from '@/lib/engine/workout-generator'
@@ -36,6 +38,10 @@ interface AppState {
   // Personal records
   personalRecords: PersonalRecord[]
 
+  // Social
+  friends: Friend[]
+  userChallenges: UserChallenge[]
+
   // UI state
   readinessScore: number | null
   readinessCheckedToday: boolean
@@ -43,6 +49,10 @@ interface AppState {
   // Actions
   initializeUser: (profile: UserProfile, skillLevels: UserSkillLevel[], equipmentProfile: EquipmentProfile) => void
   updateUserProfile: (updates: Partial<UserProfile>) => void
+  addFriend: (id: string, display_name: string) => void
+  removeFriend: (id: string) => void
+  createChallenge: (challenge: Omit<UserChallenge, 'id' | 'participants' | 'my_progress' | 'joined' | 'created_by_me'>) => void
+  joinChallenge: (id: string) => void
   setReadinessScore: (score: number) => void
   createFirstBlock: () => void
   generateTodaySession: () => WorkoutSession | null
@@ -86,6 +96,8 @@ export const useAppStore = create<AppState>()(
       sessions: [],
       activeSessionId: null,
       personalRecords: [],
+      friends: [],
+      userChallenges: [],
       readinessScore: null,
       readinessCheckedToday: false,
 
@@ -330,6 +342,38 @@ export const useAppStore = create<AppState>()(
         }))
       },
 
+      addFriend: (id, display_name) => {
+        set(state => {
+          if (state.friends.some(f => f.id === id)) return state
+          return { friends: [...state.friends, { id, display_name, added_at: new Date().toISOString() }] }
+        })
+      },
+
+      removeFriend: (id) => {
+        set(state => ({ friends: state.friends.filter(f => f.id !== id) }))
+      },
+
+      createChallenge: (challenge) => {
+        const id = generateId()
+        const newChallenge: UserChallenge = {
+          ...challenge,
+          id,
+          participants: 1,
+          my_progress: 0,
+          joined: true,
+          created_by_me: true,
+        }
+        set(state => ({ userChallenges: [...state.userChallenges, newChallenge] }))
+      },
+
+      joinChallenge: (id) => {
+        set(state => ({
+          userChallenges: state.userChallenges.map(c =>
+            c.id === id ? { ...c, joined: true, participants: c.participants + 1 } : c
+          ),
+        }))
+      },
+
       regressProgression: (skillId) => {
         set(state => ({
           skillLevels: state.skillLevels.map(sl => {
@@ -416,6 +460,8 @@ export const useAppStore = create<AppState>()(
         currentBlock: state.currentBlock,
         sessions: state.sessions,
         personalRecords: state.personalRecords,
+        friends: state.friends,
+        userChallenges: state.userChallenges,
       }),
     }
   )

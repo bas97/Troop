@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
 import { useAppStore } from '@/lib/store/app-store'
 import { EQUIPMENT, EQUIPMENT_PROFILES_PRESETS } from '@/lib/data/skills'
 import { Card } from '@/components/ui/card'
@@ -236,6 +237,112 @@ function TrainingLog() {
   )
 }
 
+// ─── Edit profile modal ───────────────────────────────────────────────────────
+
+const DAYS_FULL = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+function EditProfileModal({ onClose }: { onClose: () => void }) {
+  const userProfile    = useAppStore(s => s.userProfile)
+  const updateProfile  = useAppStore(s => s.updateUserProfile)
+
+  const [name, setName]   = useState(userProfile?.display_name ?? '')
+  const [goal, setGoal]   = useState<'skill' | 'strength' | 'balanced'>(userProfile?.goal ?? 'balanced')
+  const [freq, setFreq]   = useState<3 | 4 | 5>(userProfile?.training_frequency ?? 3)
+  const [days, setDays]   = useState<number[]>(userProfile?.training_days ?? [1, 3, 5])
+
+  const toggleDay = (d: number) => {
+    setDays(prev => {
+      if (prev.includes(d)) return prev.length <= freq ? prev : prev.filter(x => x !== d)
+      return [...prev, d].sort((a, b) => a - b)
+    })
+  }
+
+  const handleSave = () => {
+    updateProfile({ display_name: name, goal, training_frequency: freq, training_days: days })
+    onClose()
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 bg-[var(--bg-base)] px-5 pt-12 pb-8 overflow-y-auto"
+    >
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-semibold">Edit profile</h2>
+        <button onClick={onClose} className="text-sm text-[var(--text-secondary)]">Cancel</button>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div>
+          <div className="text-xs text-[var(--text-tertiary)] mb-2">Name</div>
+          <input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] text-sm"
+          />
+        </div>
+
+        <div>
+          <div className="text-xs text-[var(--text-tertiary)] mb-2">Goal</div>
+          <div className="flex gap-2">
+            {(['skill', 'strength', 'balanced'] as const).map(g => (
+              <button
+                key={g}
+                onClick={() => setGoal(g)}
+                className="flex-1 py-2.5 rounded-xl border text-sm font-medium capitalize transition-all"
+                style={{ borderColor: goal === g ? 'var(--accent)' : 'var(--border)', background: goal === g ? 'var(--accent-muted)' : 'var(--bg-surface)', color: goal === g ? 'var(--accent)' : 'var(--text-secondary)' }}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="text-xs text-[var(--text-tertiary)] mb-2">Training days per week</div>
+          <div className="flex gap-2">
+            {([3, 4, 5] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setFreq(f)}
+                className="flex-1 py-2.5 rounded-xl border text-sm font-medium mono transition-all"
+                style={{ borderColor: freq === f ? 'var(--accent)' : 'var(--border)', background: freq === f ? 'var(--accent-muted)' : 'var(--bg-surface)', color: freq === f ? 'var(--accent)' : 'var(--text-secondary)' }}
+              >
+                {f}×
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="text-xs text-[var(--text-tertiary)] mb-2">Training days</div>
+          <div className="flex gap-1.5">
+            {DAYS_FULL.map((d, i) => {
+              const active = days.includes(i)
+              return (
+                <button
+                  key={i}
+                  onClick={() => toggleDay(i)}
+                  className="flex-1 h-10 rounded-lg text-xs font-medium transition-all"
+                  style={{ background: active ? 'var(--accent-muted)' : 'var(--bg-elevated)', color: active ? 'var(--accent)' : 'var(--text-tertiary)', border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}` }}
+                >
+                  {d[0]}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <Button fullWidth size="lg" disabled={!name.trim()} onClick={handleSave} className="mt-2">
+          Save changes
+        </Button>
+      </div>
+    </motion.div>
+  )
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
@@ -244,16 +351,22 @@ export default function ProfilePage() {
   const sessions = useAppStore(s => s.sessions)
   const personalRecords = useAppStore(s => s.personalRecords)
 
+  const [editingProfile, setEditingProfile] = useState(false)
+
   const streak = getStreak()
   const totalSessions = sessions.filter(s => s.status === 'completed').length
 
   return (
     <div className="px-5 pt-12 page-enter">
+      <AnimatePresence>
+        {editingProfile && <EditProfileModal onClose={() => setEditingProfile(false)} />}
+      </AnimatePresence>
+
       <BackButton className="mb-2" />
       {/* Profile header */}
       <div className="flex items-center gap-4 mb-8">
         <LogoMark size={56} />
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-semibold text-[var(--text-primary)]">
             {userProfile?.display_name ?? 'Athlete'}
           </h1>
@@ -261,6 +374,12 @@ export default function ProfilePage() {
             Training since {userProfile?.created_at ? new Date(userProfile.created_at).toLocaleDateString('en', { month: 'long', year: 'numeric' }) : '—'}
           </div>
         </div>
+        <button
+          onClick={() => setEditingProfile(true)}
+          className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] px-3 py-1.5 rounded-lg transition-colors"
+        >
+          Edit
+        </button>
       </div>
 
       {/* Stats row */}

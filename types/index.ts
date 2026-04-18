@@ -191,13 +191,24 @@ export interface Challenge {
   joined?: boolean
 }
 
-export interface TrainingPartner {
+export interface Friend {
   id: string
   display_name: string
-  avatar_url?: string
-  skill_levels?: UserSkillLevel[]
-  training_days?: number[]
-  streak?: number
+  added_at: string
+}
+
+export interface UserChallenge {
+  id: string
+  title: string
+  description: string
+  type: ChallengeType
+  end_date: string
+  target: number
+  created_by_me: boolean
+  my_progress: number
+  joined: boolean
+  participants: number
+  invited_friend_ids: string[]
 }
 
 // ─── Engine Types ─────────────────────────────────────────────────────────────

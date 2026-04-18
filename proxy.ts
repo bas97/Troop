@@ -31,7 +31,7 @@ export async function proxy(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const { pathname } = req.nextUrl
-  const isAuthRoute = pathname.startsWith('/auth')
+  const isAuthRoute = pathname.startsWith('/auth') || pathname.startsWith('/add-friend')
 
   // Unauthenticated user trying to access the app → send to login
   if (!user && !isAuthRoute) {

@@ -13,6 +13,7 @@ import { format } from 'date-fns'
 import type { WorkoutSession } from '@/types'
 import { LogoMark } from '@/components/ui/logo'
 import { BackButton } from '@/components/ui/back-button'
+import Link from 'next/link'
 
 // ─── Readiness check-in ───────────────────────────────────────────────────────
 
@@ -285,6 +286,9 @@ function BlockProgress() {
             </div>
           </div>
         </div>
+        <Link href="/program" className="block w-full text-center text-xs text-[var(--accent)] font-medium py-2 rounded-lg border border-[var(--accent)] border-opacity-30 hover:bg-[var(--accent-muted)] transition-colors mb-3">
+          View full programme →
+        </Link>
         <ProgressBar value={progress} />
         <div className="flex justify-between mt-1.5">
           <span className="mono text-xs text-[var(--text-tertiary)]">Week {currentBlock.current_week}</span>
