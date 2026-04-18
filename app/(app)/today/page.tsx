@@ -246,8 +246,12 @@ function RestDayCard() {
 // ─── Quick stats row ──────────────────────────────────────────────────────────
 
 function QuickStats() {
-  const getStreak = useAppStore(s => s.getStreak)
-  const getWeeklySessionCount = useAppStore(s => s.getWeeklySessionCount)
+  const sessions    = useAppStore(s => s.sessions)   // subscribe so we re-render on change
+  const userProfile = useAppStore(s => s.userProfile)
+  const getStreak              = useAppStore(s => s.getStreak)
+  const getWeeklySessionCount  = useAppStore(s => s.getWeeklySessionCount)
+
+  void sessions; void userProfile // consumed by getters below
   const streak = getStreak()
   const { done, total } = getWeeklySessionCount()
 
