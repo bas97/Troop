@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { BackButton } from '@/components/ui/back-button'
 
 // ─── Mock data ──────────────────────────────────────────────────────���─────────
 
@@ -215,6 +216,7 @@ export default function CommunityPage() {
 
   return (
     <div className="px-5 pt-12 page-enter">
+      <BackButton className="mb-2" />
       <div className="mb-6">
         <div className="text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-1">The Troop</div>
         <h1 className="text-2xl font-semibold text-[var(--text-primary)]">Community</h1>

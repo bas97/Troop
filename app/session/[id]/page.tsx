@@ -7,6 +7,7 @@ import { useAppStore } from '@/lib/store/app-store'
 import { getProgressionById } from '@/lib/data/progressions'
 import { Button } from '@/components/ui/button'
 import { ProgressBar } from '@/components/ui/progress-bar'
+import { BackButton } from '@/components/ui/back-button'
 import type { PlannedExercise, LoggedSet, WorkoutSession } from '@/types'
 
 // ─── Timer hook ───────────────────────────────────────────────────────────────
@@ -294,6 +295,7 @@ function ExerciseScreen({
       <ProgressBar value={sessionProgress} className="fixed top-0 left-0 right-0 z-50 rounded-none" />
 
       <div className="flex-1 flex flex-col px-5 pt-10 pb-32">
+        <BackButton href="/today" className="mb-4" />
         {/* Exercise name + set counter */}
         <div className="mb-8">
           <div className="text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-2">

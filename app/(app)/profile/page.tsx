@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import type { EquipmentProfile } from '@/types'
 import { LogoMark } from '@/components/ui/logo'
+import { BackButton } from '@/components/ui/back-button'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -248,6 +249,7 @@ export default function ProfilePage() {
 
   return (
     <div className="px-5 pt-12 page-enter">
+      <BackButton className="mb-2" />
       {/* Profile header */}
       <div className="flex items-center gap-4 mb-8">
         <LogoMark size={56} />

@@ -7,6 +7,7 @@ import { SKILLS } from '@/lib/data/skills'
 import { PROGRESSIONS, getProgressionsForSkill, getProgressionById } from '@/lib/data/progressions'
 import { Card } from '@/components/ui/card'
 import { ProgressBar } from '@/components/ui/progress-bar'
+import { BackButton } from '@/components/ui/back-button'
 import { format, parseISO, subDays } from 'date-fns'
 
 // ─── Skill card ───────────────────────────────────────────────────────────────
@@ -242,6 +243,7 @@ export default function ProgressPage() {
 
   return (
     <div className="px-5 pt-12 page-enter">
+      <BackButton className="mb-2" />
       <div className="mb-6">
         <div className="text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-1">Your journey</div>
         <h1 className="text-2xl font-semibold text-[var(--text-primary)]">Progress</h1>

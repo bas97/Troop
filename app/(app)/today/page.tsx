@@ -12,6 +12,7 @@ import { SKILLS } from '@/lib/data/skills'
 import { format } from 'date-fns'
 import type { WorkoutSession } from '@/types'
 import { LogoMark } from '@/components/ui/logo'
+import { BackButton } from '@/components/ui/back-button'
 
 // ─── Readiness check-in ───────────────────────────────────────────────────────
 
@@ -341,6 +342,7 @@ export default function TodayPage() {
 
   return (
     <div className="px-5 pt-12 page-enter">
+      <BackButton className="mb-2" />
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

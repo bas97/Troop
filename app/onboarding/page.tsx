@@ -7,6 +7,8 @@ import { useAppStore } from '@/lib/store/app-store'
 import { SKILLS, EQUIPMENT, EQUIPMENT_PROFILES_PRESETS } from '@/lib/data/skills'
 import { PROGRESSIONS } from '@/lib/data/progressions'
 import { Button } from '@/components/ui/button'
+import { Logo } from '@/components/ui/logo'
+import { BackButton } from '@/components/ui/back-button'
 import type { UserProfile, UserSkillLevel, EquipmentProfile } from '@/types'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -491,13 +493,8 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen px-5 pt-12 pb-8 page-enter">
-      {/* Logo */}
-      <div className="flex items-center gap-2 mb-8">
-        <div className="w-8 h-8 rounded-lg bg-[var(--accent)] flex items-center justify-center">
-          <span className="text-[#0a0a0a] font-bold text-sm">T</span>
-        </div>
-        <span className="font-semibold text-[var(--text-primary)] tracking-tight">Troop</span>
-      </div>
+      <BackButton href={step === 0 ? '/auth/login' : undefined} onClick={step > 0 ? () => setStep(s => s - 1) : undefined} className="mb-4" />
+      <Logo className="mb-8" iconSize={32} />
 
       <StepIndicator current={step} total={totalSteps} />
 
