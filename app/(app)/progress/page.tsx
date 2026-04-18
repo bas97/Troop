@@ -14,15 +14,20 @@ import type { UserSkillStatus } from '@/types'
 // ─── Edit Focus Skills modal ──────────────────────────────────────────────────
 
 function EditFocusModal({ onClose }: { onClose: () => void }) {
-  const skillLevels = useAppStore(s => s.skillLevels)
+  const skillLevels    = useAppStore(s => s.skillLevels)
   const setSkillStatus = useAppStore(s => s.setSkillStatus)
+  const addSkillLevel  = useAppStore(s => s.addSkillLevel)
 
   const families = ['pushing', 'pulling', 'balance', 'legs'] as const
 
-  function toggle(skillId: string, current: UserSkillStatus) {
-    if (current === 'focus') {
+  function handleTap(skillId: string) {
+    const sl = skillLevels.find(s => s.skill_id === skillId)
+    if (!sl) {
+      // Not tracked yet — add as focus
+      addSkillLevel(skillId, 'focus')
+    } else if (sl.status === 'focus') {
       setSkillStatus(skillId, 'maintenance')
-    } else if (current === 'maintenance' || current === 'paused') {
+    } else {
       setSkillStatus(skillId, 'focus')
     }
   }
@@ -38,8 +43,8 @@ function EditFocusModal({ onClose }: { onClose: () => void }) {
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-12 pb-4 border-b border-[var(--border)]">
         <div>
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Edit Focus Skills</h2>
-          <p className="text-sm text-[var(--text-secondary)] mt-0.5">Tap a skill to toggle focus on/off</p>
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Skills</h2>
+          <p className="text-sm text-[var(--text-secondary)] mt-0.5">Tap to add or toggle focus</p>
         </div>
         <button
           onClick={onClose}
@@ -55,29 +60,29 @@ function EditFocusModal({ onClose }: { onClose: () => void }) {
       <div className="flex-1 overflow-y-auto px-5 py-4">
         {families.map(family => {
           const familySkills = SKILLS.filter(s => s.family === family)
-          const tracked = familySkills.filter(s => skillLevels.some(sl => sl.skill_id === s.id && sl.status !== 'locked'))
-          if (tracked.length === 0) return null
 
           return (
             <div key={family} className="mb-6">
               <div className="text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-3 capitalize">{family}</div>
               <div className="flex flex-col gap-2">
-                {tracked.map(skill => {
-                  const sl = skillLevels.find(s => s.skill_id === skill.id)!
-                  const isFocus = sl.status === 'focus'
-                  const progression = getProgressionById(sl.current_progression_id)
+                {familySkills.map(skill => {
+                  const sl = skillLevels.find(s => s.skill_id === skill.id)
+                  const isTracked = !!sl && sl.status !== 'locked'
+                  const isFocus   = sl?.status === 'focus'
+                  const progression = sl ? getProgressionById(sl.current_progression_id) : null
 
                   return (
                     <button
                       key={skill.id}
-                      onClick={() => toggle(skill.id, sl.status)}
+                      onClick={() => handleTap(skill.id)}
                       className="flex items-center gap-3 p-3 rounded-xl border transition-all text-left"
                       style={{
                         background: isFocus ? 'var(--accent-muted)' : 'var(--bg-surface)',
                         borderColor: isFocus ? 'var(--accent)' : 'var(--border)',
+                        opacity: !isTracked ? 0.6 : 1,
                       }}
                     >
-                      {/* Focus indicator */}
+                      {/* State indicator */}
                       <div
                         className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
                         style={{
@@ -90,19 +95,37 @@ function EditFocusModal({ onClose }: { onClose: () => void }) {
                             <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                           </svg>
                         )}
+                        {!isTracked && (
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                            <path d="M5 2v6M2 5h6" stroke="var(--text-tertiary)" strokeWidth="1.5" strokeLinecap="round"/>
+                          </svg>
+                        )}
                       </div>
+
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm text-[var(--text-primary)]">{skill.name}</div>
-                        <div className="text-xs text-[var(--text-secondary)] truncate">{progression?.name ?? 'Level 1'}</div>
+                        <div className="text-xs text-[var(--text-secondary)] truncate">
+                          {progression?.name ?? 'Starts at Level 1'}
+                        </div>
                       </div>
+
                       <span
                         className="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
                         style={{
-                          background: isFocus ? 'var(--accent)' : 'var(--bg-elevated)',
-                          color: isFocus ? 'white' : 'var(--text-secondary)',
+                          background: isFocus
+                            ? 'var(--accent)'
+                            : isTracked
+                              ? 'var(--bg-elevated)'
+                              : 'transparent',
+                          color: isFocus
+                            ? 'white'
+                            : isTracked
+                              ? 'var(--text-secondary)'
+                              : 'var(--text-tertiary)',
+                          border: !isTracked ? '1px solid var(--border)' : 'none',
                         }}
                       >
-                        {isFocus ? 'Focus' : 'Maintenance'}
+                        {isFocus ? 'Focus' : isTracked ? 'Maintenance' : 'Add'}
                       </span>
                     </button>
                   )

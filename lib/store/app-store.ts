@@ -73,6 +73,7 @@ interface AppState {
   advanceProgression: (skillId: string) => void
   regressProgression: (skillId: string) => void
   setSkillStatus: (skillId: string, status: import('@/types').UserSkillStatus) => void
+  addSkillLevel: (skillId: string, status: import('@/types').UserSkillStatus) => void
   restoreFromCloud: (data: import('@/lib/supabase/sync').SupabaseUserData) => void
   addPark: (park: UserPark) => void
   removePark: (placeId: string) => void
@@ -413,6 +414,31 @@ export const useAppStore = create<AppState>()(
               ? { ...state.currentBlock, focus_skill_ids: newFocusIds, maintenance_skill_ids: newMaintenanceIds }
               : state.currentBlock,
           }
+        })
+      },
+
+      addSkillLevel: (skillId, status) => {
+        const state = get()
+        if (state.skillLevels.some(sl => sl.skill_id === skillId)) return // already tracked
+        const firstProgression = PROGRESSIONS
+          .filter(p => p.skill_id === skillId)
+          .sort((a, b) => a.level - b.level)[0]
+        if (!firstProgression) return
+        const newSkillLevel: UserSkillLevel = {
+          user_id: state.userProfile?.id ?? '',
+          skill_id: skillId,
+          current_progression_id: firstProgression.id,
+          current_progression_level: firstProgression.level,
+          status,
+        }
+        const newSkillLevels = [...state.skillLevels, newSkillLevel]
+        const newFocusIds = newSkillLevels.filter(sl => sl.status === 'focus').map(sl => sl.skill_id)
+        const newMaintenanceIds = newSkillLevels.filter(sl => sl.status === 'maintenance').map(sl => sl.skill_id)
+        set({
+          skillLevels: newSkillLevels,
+          currentBlock: state.currentBlock
+            ? { ...state.currentBlock, focus_skill_ids: newFocusIds, maintenance_skill_ids: newMaintenanceIds }
+            : state.currentBlock,
         })
       },
 
