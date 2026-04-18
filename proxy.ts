@@ -9,7 +9,7 @@ const PUBLIC_PATHS = [
   '/icons',
 ]
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // Allow public paths through
