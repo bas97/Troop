@@ -142,6 +142,15 @@ function WorkoutCard({
           Start session
         </Button>
 
+        {/* Programme link */}
+        <Link
+          href="/program"
+          className="block w-full text-center text-xs font-medium py-2 mt-2 rounded-xl border transition-colors"
+          style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+        >
+          View full programme →
+        </Link>
+
         {/* Expand toggle */}
         <button
           onClick={() => setExpanded(e => !e)}
@@ -214,7 +223,7 @@ function RestDayCard() {
         <p className="text-sm text-[var(--text-secondary)] mb-5">
           Your body is building. Recovery is part of training.
         </p>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 mb-4">
           <Button variant="secondary" size="md" fullWidth>
             10 min handstand practice
           </Button>
@@ -222,6 +231,13 @@ function RestDayCard() {
             15 min mobility flow
           </Button>
         </div>
+        <Link
+          href="/program"
+          className="block w-full text-center text-xs font-medium py-2.5 rounded-xl border transition-colors"
+          style={{ borderColor: 'var(--accent)', color: 'var(--accent)' }}
+        >
+          View full programme →
+        </Link>
       </Card>
     </motion.div>
   )
