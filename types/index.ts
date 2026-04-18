@@ -211,6 +211,16 @@ export interface UserChallenge {
   invited_friend_ids: string[]
 }
 
+// ─── Parks ────────────────────────────────────────────────────────────────────
+
+export interface UserPark {
+  placeId: string
+  name:    string
+  address: string
+  lat:     number
+  lng:     number
+}
+
 // ─── Engine Types ─────────────────────────────────────────────────────────────
 
 export interface WorkoutGenerationInput {

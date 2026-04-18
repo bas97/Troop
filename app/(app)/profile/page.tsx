@@ -1,18 +1,121 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import Link from 'next/link'
 import { useAppStore } from '@/lib/store/app-store'
 import { EQUIPMENT, EQUIPMENT_PROFILES_PRESETS } from '@/lib/data/skills'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import type { EquipmentProfile } from '@/types'
+import type { EquipmentProfile, UserPark } from '@/types'
 import { LogoMark } from '@/components/ui/logo'
 import { BackButton } from '@/components/ui/back-button'
+import { searchCalisthenicParks } from '@/lib/supabase/parks'
+import type { PlaceResult } from '@/lib/supabase/parks'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+// ─── Avatar display + upload ──────────────────────────────────────────────────
+
+function AvatarDisplay() {
+  const userProfile      = useAppStore(s => s.userProfile)
+  const updateUserProfile = useAppStore(s => s.updateUserProfile)
+  const fileInputRef     = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+
+    try {
+      // Resize to 300×300 via Canvas API
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const img = new Image()
+        const objectUrl = URL.createObjectURL(file)
+        img.onload = () => {
+          URL.revokeObjectURL(objectUrl)
+          const canvas = document.createElement('canvas')
+          canvas.width = 300
+          canvas.height = 300
+          const ctx = canvas.getContext('2d')
+          if (!ctx) { reject(new Error('canvas')); return }
+          ctx.drawImage(img, 0, 0, 300, 300)
+          resolve(canvas.toDataURL('image/jpeg', 0.85))
+        }
+        img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('load')) }
+        img.src = objectUrl
+      })
+
+      // Try Supabase Storage
+      let publicUrl: string | null = null
+      if (userProfile?.id) {
+        try {
+          const { createClient } = await import('@/lib/supabase/client')
+          const sb = createClient()
+          const blob = await (await fetch(dataUrl)).blob()
+          const path = `${userProfile.id}.jpg`
+          const { error } = await sb.storage.from('avatars').upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
+          if (!error) {
+            const { data: urlData } = sb.storage.from('avatars').getPublicUrl(path)
+            publicUrl = urlData.publicUrl
+          }
+        } catch {
+          // Storage not configured — fall through to dataUrl
+        }
+      }
+
+      updateUserProfile({ avatar_url: publicUrl ?? dataUrl })
+    } catch {
+      // ignore
+    } finally {
+      setUploading(false)
+      // Reset input so same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const avatarUrl = userProfile?.avatar_url
+
+  return (
+    <div className="relative flex-shrink-0" style={{ width: 56, height: 56 }}>
+      {avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={avatarUrl}
+          alt={userProfile?.display_name ?? 'Avatar'}
+          width={56}
+          height={56}
+          className="rounded-xl object-cover"
+          style={{ width: 56, height: 56 }}
+        />
+      ) : (
+        <LogoMark size={56} />
+      )}
+
+      {/* Camera button overlay */}
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        className="absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center"
+        style={{ background: uploading ? 'var(--text-tertiary)' : '#f59e0b', transform: 'translate(25%, 25%)' }}
+        aria-label="Change avatar"
+      >
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+      </button>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+    </div>
+  )
+}
 
 // ─── Equipment profile editor ─────────────────────────────────────────────────
 
@@ -193,6 +296,142 @@ function EquipmentProfiles() {
   )
 }
 
+// ─── Training spots section ───────────────────────────────────────────────────
+
+function TrainingSpots() {
+  const parks               = useAppStore(s => s.parks)
+  const allowParkDiscovery  = useAppStore(s => s.allowParkDiscovery)
+  const addPark             = useAppStore(s => s.addPark)
+  const removePark          = useAppStore(s => s.removePark)
+  const setAllowParkDiscovery = useAppStore(s => s.setAllowParkDiscovery)
+
+  const [query, setQuery]     = useState('')
+  const [results, setResults] = useState<PlaceResult[]>([])
+  const [searching, setSearching] = useState(false)
+
+  const hasApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+
+  const handleSearch = async () => {
+    if (!query.trim()) return
+    setSearching(true)
+    try {
+      const r = await searchCalisthenicParks(query)
+      setResults(r)
+    } catch {
+      setResults([])
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const handleAdd = (place: PlaceResult) => {
+    const park: UserPark = {
+      placeId: place.placeId,
+      name:    place.name,
+      address: place.address,
+      lat:     place.lat,
+      lng:     place.lng,
+    }
+    addPark(park)
+    setResults(prev => prev.filter(r => r.placeId !== place.placeId))
+  }
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-xs uppercase tracking-widest text-[var(--text-tertiary)]">Training spots</div>
+        <span className="text-xs text-[var(--text-tertiary)]">+ Add</span>
+      </div>
+
+      {!hasApiKey ? (
+        <Card>
+          <p className="text-xs text-[var(--text-tertiary)]">
+            Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment to enable park search.
+          </p>
+        </Card>
+      ) : (
+        <>
+          {/* Discovery toggle */}
+          <div className="flex items-center justify-between mb-4 p-3.5 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)]">
+            <span className="text-sm text-[var(--text-primary)]">Allow people to find me at my parks</span>
+            <button
+              onClick={() => setAllowParkDiscovery(!allowParkDiscovery)}
+              className="relative w-10 h-5 rounded-full transition-colors flex-shrink-0"
+              style={{ background: allowParkDiscovery ? 'var(--accent)' : 'var(--bg-overlay)' }}
+              aria-label="Toggle park discovery"
+            >
+              <span
+                className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform"
+                style={{ transform: allowParkDiscovery ? 'translateX(22px)' : 'translateX(2px)' }}
+              />
+            </button>
+          </div>
+
+          {/* Search input */}
+          <div className="flex gap-2 mb-3">
+            <input
+              type="text"
+              placeholder="Search for calisthenics parks..."
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSearch()}
+              className="flex-1 px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--accent)] text-sm"
+            />
+            <button
+              onClick={handleSearch}
+              disabled={searching}
+              className="px-4 py-2.5 rounded-xl bg-[var(--accent)] text-white text-sm font-medium disabled:opacity-50 transition-opacity"
+            >
+              {searching ? '…' : 'Search'}
+            </button>
+          </div>
+
+          {/* Search results */}
+          {results.length > 0 && (
+            <div className="flex flex-col gap-2 mb-3">
+              {results.map(r => (
+                <div key={r.placeId} className="flex items-center gap-3 p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)]">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-[var(--text-primary)] truncate">{r.name}</div>
+                    <div className="text-xs text-[var(--text-tertiary)] truncate">{r.address}</div>
+                  </div>
+                  <button
+                    onClick={() => handleAdd(r)}
+                    className="text-xs text-[var(--accent)] font-medium flex-shrink-0 hover:opacity-80 transition-opacity"
+                  >
+                    + Add
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Added parks chips */}
+          {parks.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {parks.map(park => (
+                <div
+                  key={park.placeId}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--border)] bg-[var(--bg-surface)] text-xs text-[var(--text-primary)]"
+                >
+                  <span className="truncate max-w-[150px]">{park.name}</span>
+                  <button
+                    onClick={() => removePark(park.placeId)}
+                    className="text-[var(--text-tertiary)] hover:text-[var(--danger)] transition-colors flex-shrink-0 ml-0.5"
+                    aria-label={`Remove ${park.name}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 // ─── Training log ─────────────────────────────────────────────────────────────
 
 function TrainingLog() {
@@ -365,7 +604,7 @@ export default function ProfilePage() {
       <BackButton className="mb-2" />
       {/* Profile header */}
       <div className="flex items-center gap-4 mb-8">
-        <LogoMark size={56} />
+        <AvatarDisplay />
         <div className="flex-1">
           <h1 className="text-xl font-semibold text-[var(--text-primary)]">
             {userProfile?.display_name ?? 'Athlete'}
@@ -427,6 +666,7 @@ export default function ProfilePage() {
       )}
 
       <EquipmentProfiles />
+      <TrainingSpots />
       <TrainingLog />
     </div>
   )

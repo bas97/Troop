@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { QRCodeSVG } from 'qrcode.react'
 import { useAppStore } from '@/lib/store/app-store'
@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { BackButton } from '@/components/ui/back-button'
 import type { UserChallenge } from '@/types'
+import { getUsersAtPark } from '@/lib/supabase/parks'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -290,6 +291,101 @@ function ChallengesTab() {
   )
 }
 
+// ─── People at parks ──────────────────────────────────────────────────────────
+
+type ParkUser = {
+  user_id: string
+  name: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  user_profiles: any
+}
+
+function PeopleAtParks() {
+  const parks      = useAppStore(s => s.parks)
+  const addFriend  = useAppStore(s => s.addFriend)
+
+  const [parkUsers, setParkUsers] = useState<Record<string, ParkUser[]>>({})
+  const [loading, setLoading]     = useState(false)
+
+  useEffect(() => {
+    if (parks.length === 0) return
+    setLoading(true)
+    Promise.all(
+      parks.map(async park => {
+        try {
+          const users = await getUsersAtPark(park.placeId)
+          return { placeId: park.placeId, users: users as ParkUser[] }
+        } catch {
+          return { placeId: park.placeId, users: [] }
+        }
+      })
+    ).then(results => {
+      const map: Record<string, ParkUser[]> = {}
+      for (const r of results) map[r.placeId] = r.users
+      setParkUsers(map)
+      setLoading(false)
+    })
+  }, [parks])
+
+  if (parks.length === 0) {
+    return (
+      <div className="mt-6">
+        <div className="text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-3">People at your parks</div>
+        <Card>
+          <p className="text-sm text-[var(--text-secondary)]">
+            Add training spots in your profile to find people nearby.
+          </p>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-6">
+      <div className="text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-3">People at your parks</div>
+      {loading && (
+        <p className="text-sm text-[var(--text-tertiary)] text-center py-4">Loading…</p>
+      )}
+      {!loading && parks.map(park => {
+        const users = parkUsers[park.placeId] ?? []
+        return (
+          <div key={park.placeId} className="mb-4">
+            <div className="text-sm font-medium text-[var(--text-primary)] mb-2">{park.name}</div>
+            {users.length === 0 ? (
+              <p className="text-xs text-[var(--text-tertiary)] mb-2">No other athletes here yet.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {users.map(u => {
+                  const displayName: string = u.user_profiles?.display_name ?? 'Athlete'
+                  return (
+                    <div key={u.user_id} className="flex items-center gap-3 p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)]">
+                      <div
+                        className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                        style={{ background: 'var(--accent)' }}
+                      >
+                        {displayName[0]?.toUpperCase()}
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-[var(--text-primary)]">{displayName}</div>
+                      </div>
+                      <button
+                        onClick={() => addFriend(u.user_id, displayName)}
+                        className="text-xs font-medium text-[var(--accent)] hover:opacity-80 transition-opacity px-2"
+                      >
+                        Add friend
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ─── Friends tab ──────────────────────────────────────────────────────────────
 
 function FriendsTab() {
@@ -342,6 +438,8 @@ function FriendsTab() {
           ))}
         </div>
       )}
+
+      <PeopleAtParks />
 
       {/* QR modal */}
       <AnimatePresence>

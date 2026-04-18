@@ -14,6 +14,7 @@ import type {
   PersonalRecord,
   Friend,
   UserChallenge,
+  UserPark,
 } from '@/types'
 import { PROGRESSIONS } from '@/lib/data/progressions'
 import { generateWorkout, getBlockPhase, getSessionTypeForDay } from '@/lib/engine/workout-generator'
@@ -42,6 +43,10 @@ interface AppState {
   friends: Friend[]
   userChallenges: UserChallenge[]
 
+  // Parks
+  parks: UserPark[]
+  allowParkDiscovery: boolean
+
   // UI state
   readinessScore: number | null
   readinessCheckedToday: boolean
@@ -56,6 +61,7 @@ interface AppState {
   setReadinessScore: (score: number) => void
   createFirstBlock: () => void
   generateTodaySession: () => WorkoutSession | null
+  createSessionForDate: (weekNum: number, dayIdx: number, date: string) => WorkoutSession | null
   startSession: (sessionId: string) => void
   logSet: (sessionId: string, exerciseId: string, set: LoggedSet) => void
   completeSession: (sessionId: string) => void
@@ -66,6 +72,10 @@ interface AppState {
   setActiveEquipmentProfile: (id: string) => void
   advanceProgression: (skillId: string) => void
   regressProgression: (skillId: string) => void
+  restoreFromCloud: (data: import('@/lib/supabase/sync').SupabaseUserData) => void
+  addPark: (park: UserPark) => void
+  removePark: (placeId: string) => void
+  setAllowParkDiscovery: (allow: boolean) => void
   getTodaySession: () => WorkoutSession | null
   getActiveSession: () => WorkoutSession | null
   getActiveEquipment: () => string[]
@@ -98,6 +108,8 @@ export const useAppStore = create<AppState>()(
       personalRecords: [],
       friends: [],
       userChallenges: [],
+      parks: [],
+      allowParkDiscovery: true,
       readinessScore: null,
       readinessCheckedToday: false,
 
@@ -386,6 +398,80 @@ export const useAppStore = create<AppState>()(
         }))
       },
 
+      restoreFromCloud: (data) => {
+        const { profile, skillLevels, equipment, block, sessions, prs } = data
+        if (!profile) return
+        set({
+          userProfile: profile,
+          skillLevels,
+          equipmentProfiles: equipment,
+          activeEquipmentProfileId: equipment.find(e => e.is_default)?.id ?? equipment[0]?.id ?? null,
+          currentBlock: block,
+          sessions,
+          personalRecords: prs,
+        })
+      },
+
+      createSessionForDate: (weekNum, dayIdx, date) => {
+        const { userProfile, currentBlock, skillLevels, readinessScore } = get()
+        if (!userProfile || !currentBlock) return null
+
+        const existing = get().sessions.find(s => s.date === date && s.type === 'program')
+        if (existing) return existing
+
+        const { type: sessionType, label } = getSessionTypeForDay(dayIdx, userProfile.training_frequency)
+        const phase = getBlockPhase(weekNum, currentBlock.duration_weeks)
+        const activeEquipment = get().getActiveEquipment()
+
+        const result = generateWorkout({
+          userId: userProfile.id,
+          userProfile,
+          skillLevels,
+          focusSkillIds: currentBlock.focus_skill_ids,
+          activeEquipment,
+          blockPhase: phase,
+          sessionType,
+          sessionLabel: label,
+          readinessScore: readinessScore ?? 4,
+          weekNumber: weekNum,
+          trainingFrequency: userProfile.training_frequency,
+          sessionIndexThisWeek: dayIdx,
+          date,
+        })
+
+        const session: WorkoutSession = {
+          id: generateId(),
+          user_id: userProfile.id,
+          training_block_id: currentBlock.id,
+          date,
+          type: 'program',
+          session_type: sessionType,
+          session_label: label,
+          week_number: weekNum,
+          planned_exercises: result.exercises,
+          readiness_score: readinessScore ?? 4,
+          status: 'planned',
+        }
+
+        set(state => ({ sessions: [...state.sessions, session] }))
+        return session
+      },
+
+      addPark: (park) => {
+        set(state => {
+          if (state.parks.some(p => p.placeId === park.placeId)) return state
+          return { parks: [...state.parks, park] }
+        })
+      },
+
+      removePark: (placeId) => {
+        set(state => ({ parks: state.parks.filter(p => p.placeId !== placeId) }))
+      },
+
+      setAllowParkDiscovery: (allow) => {
+        set({ allowParkDiscovery: allow })
+      },
+
       getTodaySession: () => {
         const today = todayStr()
         return get().sessions.find(s => s.date === today && s.type !== 'custom') ?? null
@@ -462,6 +548,8 @@ export const useAppStore = create<AppState>()(
         personalRecords: state.personalRecords,
         friends: state.friends,
         userChallenges: state.userChallenges,
+        parks: state.parks,
+        allowParkDiscovery: state.allowParkDiscovery,
       }),
     }
   )
