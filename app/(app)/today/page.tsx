@@ -11,6 +11,7 @@ import { PROGRESSIONS, getProgressionById } from '@/lib/data/progressions'
 import { SKILLS } from '@/lib/data/skills'
 import { format } from 'date-fns'
 import type { WorkoutSession } from '@/types'
+import { LogoMark } from '@/components/ui/logo'
 
 // ─── Readiness check-in ───────────────────────────────────────────────────────
 
@@ -350,9 +351,7 @@ export default function TodayPage() {
             {isRestDay ? 'Rest day' : 'Train today'}
           </h1>
         </div>
-        <div className="w-8 h-8 rounded-lg bg-[var(--accent)] flex items-center justify-center">
-          <span className="text-[#0a0a0a] font-bold text-sm">T</span>
-        </div>
+        <LogoMark size={32} />
       </div>
 
       {/* Readiness check-in */}

@@ -8,6 +8,7 @@ import { EQUIPMENT, EQUIPMENT_PROFILES_PRESETS } from '@/lib/data/skills'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import type { EquipmentProfile } from '@/types'
+import { LogoMark } from '@/components/ui/logo'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -249,9 +250,7 @@ export default function ProfilePage() {
     <div className="px-5 pt-12 page-enter">
       {/* Profile header */}
       <div className="flex items-center gap-4 mb-8">
-        <div className="w-14 h-14 rounded-2xl bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center">
-          <span className="text-2xl">🦍</span>
-        </div>
+        <LogoMark size={56} />
         <div>
           <h1 className="text-xl font-semibold text-[var(--text-primary)]">
             {userProfile?.display_name ?? 'Athlete'}

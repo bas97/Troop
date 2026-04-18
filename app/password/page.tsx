@@ -2,6 +2,7 @@
 
 import { useState, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { Logo } from '@/components/ui/logo'
 
 function PasswordForm() {
   const router = useRouter()
@@ -42,12 +43,7 @@ function PasswordForm() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 mb-12">
-        <div className="w-10 h-10 rounded-xl bg-[var(--accent)] flex items-center justify-center">
-          <span className="text-[#0a0a0a] font-bold text-lg">T</span>
-        </div>
-        <span className="text-xl font-semibold text-[var(--text-primary)] tracking-tight">Troop</span>
-      </div>
+      <Logo className="mb-12" iconSize={40} />
 
       <form onSubmit={handleSubmit} className="w-full max-w-xs flex flex-col gap-3">
         <input
