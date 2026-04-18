@@ -1,8 +1,10 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAppStore } from '@/lib/store/app-store'
+import { createClient } from '@/lib/supabase/client'
 import { EQUIPMENT, EQUIPMENT_PROFILES_PRESETS } from '@/lib/data/skills'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -585,12 +587,25 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
+  const router = useRouter()
   const userProfile = useAppStore(s => s.userProfile)
   const getStreak = useAppStore(s => s.getStreak)
   const sessions = useAppStore(s => s.sessions)
   const personalRecords = useAppStore(s => s.personalRecords)
 
   const [editingProfile, setEditingProfile] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+
+  async function handleSignOut() {
+    setSigningOut(true)
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+    } catch (_) {
+      // ignore — redirect anyway
+    }
+    router.replace('/auth/login')
+  }
 
   const streak = getStreak()
   const totalSessions = sessions.filter(s => s.status === 'completed').length
@@ -668,6 +683,22 @@ export default function ProfilePage() {
       <EquipmentProfiles />
       <TrainingSpots />
       <TrainingLog />
+
+      {/* Sign out */}
+      <div className="mt-2 mb-10">
+        <button
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className="w-full py-3 rounded-xl border text-sm font-medium transition-colors"
+          style={{
+            borderColor: 'var(--border)',
+            color: signingOut ? 'var(--text-tertiary)' : 'var(--text-secondary)',
+            background: 'var(--bg-surface)',
+          }}
+        >
+          {signingOut ? 'Signing out…' : 'Sign out'}
+        </button>
+      </div>
     </div>
   )
 }
