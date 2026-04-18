@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import { cn } from '@/lib/utils/cn'
 
 interface LogoMarkProps {
@@ -6,21 +5,29 @@ interface LogoMarkProps {
   className?: string
 }
 
-// The gorilla icon — used as app icon, loading states, empty states
+// Amber "T" mark in a rounded square
 export function LogoMark({ size = 32, className }: LogoMarkProps) {
+  const fontSize = Math.round(size * 0.5)
   return (
     <div
-      className={cn('rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0', className)}
-      style={{ width: size, height: size, background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+      className={cn('rounded-xl flex items-center justify-center flex-shrink-0', className)}
+      style={{
+        width: size,
+        height: size,
+        background: 'var(--accent)',
+      }}
     >
-      <Image
-        src="/brand/icon.png"
-        alt="Troop"
-        width={size}
-        height={size}
-        className="object-contain"
-        priority
-      />
+      <span
+        style={{
+          fontSize,
+          fontWeight: 800,
+          color: '#fff',
+          lineHeight: 1,
+          letterSpacing: '-0.02em',
+        }}
+      >
+        T
+      </span>
     </div>
   )
 }
@@ -31,20 +38,23 @@ interface LogoProps {
   showWordmark?: boolean
 }
 
-// Full logo: icon + wordmark side by side
+// Full logo: amber T mark + "troop" wordmark
 export function Logo({ className, iconSize = 32, showWordmark = true }: LogoProps) {
   return (
     <div className={cn('flex items-center gap-2.5', className)}>
       <LogoMark size={iconSize} />
       {showWordmark && (
-        <Image
-          src="/brand/logotype.png"
-          alt="troop"
-          width={64}
-          height={20}
-          className="object-contain h-5 w-auto"
-          priority
-        />
+        <span
+          style={{
+            fontSize: Math.round(iconSize * 0.65),
+            fontWeight: 700,
+            letterSpacing: '-0.03em',
+            color: 'var(--text-primary)',
+            lineHeight: 1,
+          }}
+        >
+          troop
+        </span>
       )}
     </div>
   )
