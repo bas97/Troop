@@ -419,15 +419,25 @@ export const useAppStore = create<AppState>()(
       restoreFromCloud: (data) => {
         const { profile, skillLevels, equipment, block, sessions, prs } = data
         if (!profile) return
+        const state = get()
         set({
           userProfile: profile,
-          skillLevels,
-          equipmentProfiles: equipment,
-          activeEquipmentProfileId: equipment.find(e => e.is_default)?.id ?? equipment[0]?.id ?? null,
-          currentBlock: block,
-          sessions,
-          personalRecords: prs,
+          // Only overwrite skillLevels / equipment if cloud has data, else keep local
+          skillLevels: skillLevels.length > 0 ? skillLevels : state.skillLevels,
+          equipmentProfiles: equipment.length > 0 ? equipment : state.equipmentProfiles,
+          activeEquipmentProfileId: equipment.find(e => e.is_default)?.id
+            ?? equipment[0]?.id
+            ?? state.activeEquipmentProfileId,
+          // Keep local block if Supabase has none yet (e.g. migration just ran)
+          currentBlock: block ?? state.currentBlock,
+          // Merge sessions: prefer cloud records but keep local ones not on cloud
+          sessions: sessions.length > 0 ? sessions : state.sessions,
+          personalRecords: prs.length > 0 ? prs : state.personalRecords,
         })
+        // If there's still no block after merge, create one now
+        if (!block && !state.currentBlock) {
+          get().createFirstBlock()
+        }
       },
 
       createSessionForDate: (weekNum, dayIdx, date) => {

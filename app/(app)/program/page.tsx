@@ -252,13 +252,35 @@ export default function ProgramPage() {
 
   void skillLevels
 
-  if (!block || !userProfile) {
+  const createFirstBlock = useAppStore(s => s.createFirstBlock)
+
+  if (!userProfile) {
     return (
       <div className="px-5 pt-12 page-enter">
         <BackButton className="mb-2" />
         <p className="text-[var(--text-secondary)] text-center py-16">
-          No active training block. Complete onboarding first.
+          Complete onboarding to see your programme.
         </p>
+      </div>
+    )
+  }
+
+  if (!block) {
+    return (
+      <div className="px-5 pt-12 page-enter">
+        <BackButton className="mb-2" />
+        <div className="flex flex-col items-center py-16 gap-4">
+          <p className="text-[var(--text-secondary)] text-center">
+            No training block found.
+          </p>
+          <button
+            onClick={() => createFirstBlock()}
+            className="px-6 py-3 rounded-xl font-medium text-white"
+            style={{ background: 'var(--accent)' }}
+          >
+            Generate my programme
+          </button>
+        </div>
       </div>
     )
   }
