@@ -48,6 +48,13 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Authenticated user hitting root → send to today
+  if (user && pathname === '/') {
+    const url = req.nextUrl.clone()
+    url.pathname = '/today'
+    return NextResponse.redirect(url)
+  }
+
   return response
 }
 

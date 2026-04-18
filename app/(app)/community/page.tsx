@@ -78,18 +78,164 @@ function PostCard({ post }: { post: typeof MOCK_POSTS[0] }) {
   )
 }
 
+// ─── Compose modal ────────────────────────────────────────────────────────────
+
+function ComposeModal({ onClose }: { onClose: () => void }) {
+  const createPost   = useAppStore(s => s.createPost)
+  const skillLevels  = useAppStore(s => s.skillLevels)
+  const [content, setContent]   = useState('')
+  const [type, setType]         = useState<import('@/types').PostType>('text')
+  const [skillId, setSkillId]   = useState('')
+
+  const trackedSkills = skillLevels.filter(sl => sl.status !== 'locked')
+
+  function submit() {
+    if (!content.trim()) return
+    createPost(content.trim(), type, skillId || undefined)
+    onClose()
+  }
+
+  const types: { value: import('@/types').PostType; label: string; icon: string }[] = [
+    { value: 'text',         label: 'Update',       icon: '💬' },
+    { value: 'pr',           label: 'New PR',        icon: '🏅' },
+    { value: 'skill_unlock', label: 'Skill unlock',  icon: '🔓' },
+    { value: 'form_check',   label: 'Form check',    icon: '🎥' },
+  ]
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex flex-col"
+      style={{ background: 'var(--bg-base)' }}
+    >
+      <div className="flex items-center justify-between px-5 pt-12 pb-4 border-b border-[var(--border)]">
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">New post</h2>
+        <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'var(--bg-elevated)' }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1L13 13M13 1L1 13" stroke="var(--text-secondary)" strokeWidth="1.5" strokeLinecap="round"/></svg>
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
+        {/* Type selector */}
+        <div>
+          <div className="text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-2">Type</div>
+          <div className="flex flex-wrap gap-2">
+            {types.map(t => (
+              <button
+                key={t.value}
+                onClick={() => setType(t.value)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm transition-all"
+                style={{
+                  borderColor: type === t.value ? 'var(--accent)' : 'var(--border)',
+                  background:  type === t.value ? 'var(--accent-muted)' : 'var(--bg-surface)',
+                  color:       type === t.value ? 'var(--accent)' : 'var(--text-secondary)',
+                }}
+              >
+                <span>{t.icon}</span>{t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Skill tag (optional) */}
+        {trackedSkills.length > 0 && (
+          <div>
+            <div className="text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-2">Tag a skill <span className="normal-case">(optional)</span></div>
+            <select
+              value={skillId}
+              onChange={e => setSkillId(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border text-sm"
+              style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
+            >
+              <option value="">No skill</option>
+              {trackedSkills.map(sl => {
+                const { SKILLS } = require('@/lib/data/skills')
+                const skill = SKILLS.find((s: { id: string }) => s.id === sl.skill_id)
+                return <option key={sl.skill_id} value={sl.skill_id}>{skill?.name ?? sl.skill_id}</option>
+              })}
+            </select>
+          </div>
+        )}
+
+        {/* Content */}
+        <div>
+          <div className="text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-2">What's on your mind?</div>
+          <textarea
+            value={content}
+            onChange={e => setContent(e.target.value)}
+            placeholder="Share your progress, a PR, a win…"
+            rows={5}
+            className="w-full px-3 py-2.5 rounded-xl border text-sm resize-none"
+            style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
+          />
+          <div className="text-right text-xs mt-1" style={{ color: content.length > 280 ? 'var(--danger)' : 'var(--text-tertiary)' }}>
+            {content.length}/280
+          </div>
+        </div>
+      </div>
+
+      <div className="px-5 pb-8 pt-4 border-t border-[var(--border)]">
+        <button
+          onClick={submit}
+          disabled={!content.trim() || content.length > 280}
+          className="w-full py-3 rounded-xl font-medium text-white transition-opacity"
+          style={{ background: 'var(--accent)', opacity: !content.trim() || content.length > 280 ? 0.4 : 1 }}
+        >
+          Post
+        </button>
+      </div>
+    </motion.div>
+  )
+}
+
 // ─── Feed tab ─────────────────────────────────────────────────────────────────
 
 function FeedTab() {
-  const friends = useAppStore(s => s.friends)
+  const friends    = useAppStore(s => s.friends)
+  const myPosts    = useAppStore(s => s.posts)
+  const userProfile = useAppStore(s => s.userProfile)
+  const [composing, setComposing] = useState(false)
+
+  // Map store posts to the shape PostCard expects
+  const myFeedPosts = myPosts.map(p => ({
+    id: p.id,
+    display_name: p.display_name ?? userProfile?.display_name ?? 'You',
+    type: p.type,
+    content: p.content,
+    related_skill: p.related_skill_id,
+    created_at: p.created_at,
+    likes: p.likes_count,
+    liked: p.liked_by_me ?? false,
+  }))
+
+  const allPosts = [...myFeedPosts, ...MOCK_POSTS].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  )
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      {friends.length === 0 && (
+      <AnimatePresence>
+        {composing && <ComposeModal onClose={() => setComposing(false)} />}
+      </AnimatePresence>
+
+      {/* Compose button */}
+      <button
+        onClick={() => setComposing(true)}
+        className="w-full mb-4 flex items-center gap-3 px-4 py-3 rounded-xl border text-sm text-left transition-colors"
+        style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)', color: 'var(--text-tertiary)' }}
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round"/></svg>
+        <span>Share an update, PR or win…</span>
+      </button>
+
+      {friends.length === 0 && myFeedPosts.length === 0 && (
         <Card className="mb-4 text-center py-4">
           <p className="text-sm text-[var(--text-secondary)]">Add friends to see their updates here.</p>
         </Card>
       )}
-      {MOCK_POSTS.map(post => <PostCard key={post.id} post={post} />)}
+      {allPosts.map(post => <PostCard key={post.id} post={post} />)}
     </motion.div>
   )
 }

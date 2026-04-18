@@ -40,6 +40,7 @@ interface AppState {
   personalRecords: PersonalRecord[]
 
   // Social
+  posts: import('@/types').SocialPost[]
   friends: Friend[]
   userChallenges: UserChallenge[]
 
@@ -74,6 +75,7 @@ interface AppState {
   regressProgression: (skillId: string) => void
   setSkillStatus: (skillId: string, status: import('@/types').UserSkillStatus) => void
   addSkillLevel: (skillId: string, status: import('@/types').UserSkillStatus) => void
+  createPost: (content: string, type: import('@/types').PostType, relatedSkillId?: string) => void
   restoreFromCloud: (data: import('@/lib/supabase/sync').SupabaseUserData) => void
   addPark: (park: UserPark) => void
   removePark: (placeId: string) => void
@@ -108,6 +110,7 @@ export const useAppStore = create<AppState>()(
       sessions: [],
       activeSessionId: null,
       personalRecords: [],
+      posts: [],
       friends: [],
       userChallenges: [],
       parks: [],
@@ -356,6 +359,24 @@ export const useAppStore = create<AppState>()(
         }))
       },
 
+      createPost: (content, type, relatedSkillId) => {
+        const { userProfile } = get()
+        const post: import('@/types').SocialPost = {
+          id: generateId(),
+          user_id: userProfile?.id ?? '',
+          display_name: userProfile?.display_name,
+          avatar_url: userProfile?.avatar_url,
+          type,
+          content,
+          related_skill_id: relatedSkillId,
+          created_at: new Date().toISOString(),
+          likes_count: 0,
+          liked_by_me: false,
+          comments: [],
+        }
+        set(state => ({ posts: [post, ...state.posts] }))
+      },
+
       addFriend: (id, display_name) => {
         set(state => {
           if (state.friends.some(f => f.id === id)) return state
@@ -600,6 +621,7 @@ export const useAppStore = create<AppState>()(
         currentBlock: state.currentBlock,
         sessions: state.sessions,
         personalRecords: state.personalRecords,
+        posts: state.posts,
         friends: state.friends,
         userChallenges: state.userChallenges,
         parks: state.parks,

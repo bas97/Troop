@@ -2,7 +2,7 @@
   "name": "Troop",
   "short_name": "Troop",
   "description": "Adaptive calisthenics skill-progression app",
-  "start_url": "/",
+  "start_url": "/today",
   "display": "standalone",
   "background_color": "#f8f9fa",
   "theme_color": "#f8f9fa",

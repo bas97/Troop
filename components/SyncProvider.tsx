@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { useAppStore } from '@/lib/store/app-store'
 import { createClient } from '@/lib/supabase/client'
-import { loadUserData, syncProfile, syncSkillLevels, syncEquipmentProfiles, syncBlock, syncSession } from '@/lib/supabase/sync'
+import { loadUserData, syncProfile, syncSkillLevels, syncEquipmentProfiles, syncBlock, syncSession, syncPR } from '@/lib/supabase/sync'
 
 export function SyncProvider() {
   const store             = useAppStore()
@@ -12,6 +12,7 @@ export function SyncProvider() {
   const sessions          = useAppStore(s => s.sessions)
   const currentBlock      = useAppStore(s => s.currentBlock)
   const equipmentProfiles = useAppStore(s => s.equipmentProfiles)
+  const personalRecords   = useAppStore(s => s.personalRecords)
   const restoreFromCloud  = useAppStore(s => s.restoreFromCloud)
   const loaded            = useRef(false)
   const syncTimer         = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -48,18 +49,21 @@ export function SyncProvider() {
       const uid = authUserId.current
       if (!uid) return
       try {
-        if (userProfile)       await syncProfile(userProfile, uid)
-        if (skillLevels.length) await syncSkillLevels(skillLevels, uid)
+        if (userProfile)              await syncProfile(userProfile, uid)
+        if (skillLevels.length)       await syncSkillLevels(skillLevels, uid)
         if (equipmentProfiles.length) await syncEquipmentProfiles(equipmentProfiles, uid)
-        if (currentBlock)      await syncBlock(currentBlock, uid)
-        for (const s of sessions.filter(s => s.status === 'completed' || s.status === 'skipped')) {
+        if (currentBlock)             await syncBlock(currentBlock, uid)
+        for (const s of sessions.filter(s => s.status === 'completed' || s.status === 'in_progress')) {
           await syncSession(s, uid)
+        }
+        for (const pr of personalRecords) {
+          await syncPR(pr, uid)
         }
       } catch {
         // silent
       }
     }, 3000)
-  }, [userProfile, skillLevels, sessions, currentBlock, equipmentProfiles])
+  }, [userProfile, skillLevels, sessions, currentBlock, equipmentProfiles, personalRecords])
 
   void store
 
