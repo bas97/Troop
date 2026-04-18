@@ -13,8 +13,9 @@ export function Card({ children, accent, hoverable, className, ...props }: CardP
       className={cn(
         'rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)]',
         'p-5 transition-all duration-150',
-        accent && 'border-[var(--accent)] border-opacity-30',
-        hoverable && 'cursor-pointer hover:bg-[var(--bg-elevated)] hover:border-[var(--border)]',
+        'shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]',
+        accent && 'border-[var(--accent)]',
+        hoverable && 'cursor-pointer hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-0.5',
         className
       )}
       {...props}

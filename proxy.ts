@@ -1,35 +1,56 @@
+import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 
-const PUBLIC_PATHS = [
-  '/password',
-  '/api/auth',
-  '/_next',
-  '/favicon.ico',
-  '/manifest.json',
-  '/icons',
-]
+export async function proxy(req: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-export function proxy(req: NextRequest) {
-  const { pathname } = req.nextUrl
-
-  // Allow public paths through
-  if (PUBLIC_PATHS.some(p => pathname.startsWith(p))) {
+  // If Supabase isn't configured yet, let all traffic through
+  if (!supabaseUrl || !supabaseKey) {
     return NextResponse.next()
   }
 
-  const auth = req.cookies.get('troop_auth')?.value
-  const expected = process.env.TROOP_AUTH_TOKEN
+  let response = NextResponse.next({ request: req })
 
-  if (!expected || auth !== expected) {
-    const loginUrl = req.nextUrl.clone()
-    loginUrl.pathname = '/password'
-    loginUrl.searchParams.set('from', pathname)
-    return NextResponse.redirect(loginUrl)
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return req.cookies.getAll()
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value))
+        response = NextResponse.next({ request: req })
+        cookiesToSet.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options)
+        )
+      },
+    },
+  })
+
+  // Refreshes the session if expired — must use getUser(), not getSession()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { pathname } = req.nextUrl
+  const isAuthRoute = pathname.startsWith('/auth')
+
+  // Unauthenticated user trying to access the app → send to login
+  if (!user && !isAuthRoute) {
+    const url = req.nextUrl.clone()
+    url.pathname = '/auth/login'
+    url.searchParams.set('from', pathname)
+    return NextResponse.redirect(url)
   }
 
-  return NextResponse.next()
+  // Authenticated user hitting an auth page → send them in
+  if (user && isAuthRoute) {
+    const url = req.nextUrl.clone()
+    url.pathname = '/today'
+    return NextResponse.redirect(url)
+  }
+
+  return response
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest.json|icons|brand).*)'],
 }

@@ -19,8 +19,6 @@ export function LogoMark({ size = 32, className }: LogoMarkProps) {
         width={size}
         height={size}
         className="object-contain"
-        // Invert the dark-brown logo to white so it shows on dark backgrounds
-        style={{ filter: 'brightness(0) invert(1)', opacity: 0.9 }}
         priority
       />
     </div>
@@ -45,8 +43,6 @@ export function Logo({ className, iconSize = 32, showWordmark = true }: LogoProp
           width={64}
           height={20}
           className="object-contain h-5 w-auto"
-          // Render white on the dark background
-          style={{ filter: 'brightness(0) invert(1)', opacity: 0.9 }}
           priority
         />
       )}
